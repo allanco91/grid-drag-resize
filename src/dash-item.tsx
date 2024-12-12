@@ -55,7 +55,6 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
         move(event);
         break;
       case "resize":
-        setCursor("se-resize");
         resize(event);
         break;
       default:
@@ -152,10 +151,10 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
 
     return verify.find(
       (v) =>
-        x + width > (v.col.start - 1) * grid.gap + v.x &&
-        (current.col.start - 1) * grid.gap + x < v.x + v.width &&
-        y + height > (v.row.start - 1) * grid.gap + v.y &&
-        (current.row.start - 1) * grid.gap + y < v.y + v.height
+        x + width >= (v.col.start - 1) * grid.gap + v.x &&
+        (current.col.start - 1) * grid.gap + x <= v.x + v.width &&
+        y + height >= (v.row.start - 1) * grid.gap + v.y &&
+        (current.row.start - 1) * grid.gap + y <= v.y + v.height
     );
   }
 
