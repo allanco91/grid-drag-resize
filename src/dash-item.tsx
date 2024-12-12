@@ -31,6 +31,12 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
     structuredClone(reseted_settings)
   );
 
+  const [cursor, setCursor] = useState<CSSProperties["cursor"]>("default");
+
+  useEffect(() => {
+    document.body.style.cursor = cursor as string;
+  }, [cursor]);
+
   useEffect(() => {
     if (!settings.event) return;
 
@@ -46,11 +52,10 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
   function handleOnMouseMove(event: MouseEvent) {
     switch (settings.event) {
       case "move":
-        document.body.style.cursor = "move";
         move(event);
         break;
       case "resize":
-        document.body.style.cursor = "se-resize";
+        setCursor("se-resize");
         resize(event);
         break;
       default:
@@ -79,13 +84,12 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
   }
 
   function end() {
-    document.body.style.cursor = "default";
+    setCursor("default");
+
     const calculated_item = calcItem(item.width, item.height);
 
-    console.log("calculated_item: ", calculated_item);
-
     if (settings.event === "resize") {
-      if (!intersects(item, item.width, item.height)) {
+      if (!intersects(item, item.width, item.height, item.x, item.y)) {
         onChange(calculated_item);
       } else {
         onChange({
@@ -97,7 +101,7 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
     }
 
     if (settings.event === "move") {
-      if (!intersects(item, item.width, item.height)) {
+      if (!intersects(item, item.width, item.height, item.x, item.y)) {
         onChange(calculated_item);
       } else {
         onChange({ ...item, x: settings.initial.x, y: settings.initial.y });
@@ -137,15 +141,21 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
     return { position: Math.floor(units) * size + position_gap, start: start };
   }
 
-  function intersects(current: Item, width: number, height: number) {
+  function intersects(
+    current: Item,
+    width: number,
+    height: number,
+    x: number,
+    y: number
+  ) {
     const verify = items.filter((item) => item.id !== current.id);
 
     return verify.find(
       (v) =>
-        item.x + width > (v.col.start - 1) * grid.gap + v.x &&
-        (item.col.start - 1) * grid.gap + item.x < v.x + v.width &&
-        item.y + height > (v.row.start - 1) * grid.gap + v.y &&
-        (item.row.start - 1) * grid.gap + item.y < v.y + v.height
+        x + width > (v.col.start - 1) * grid.gap + v.x &&
+        (current.col.start - 1) * grid.gap + x < v.x + v.width &&
+        y + height > (v.row.start - 1) * grid.gap + v.y &&
+        (current.row.start - 1) * grid.gap + y < v.y + v.height
     );
   }
 
@@ -180,6 +190,12 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
       height = max_h;
     }
 
+    if (intersects(item, item.width, item.height, item.x, item.y)) {
+      setCursor("not-allowed");
+    } else {
+      setCursor("se-resize");
+    }
+
     onChange({
       ...item,
       width: width,
@@ -188,8 +204,6 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
   }
 
   function move(event: MouseEvent) {
-    if (!settings.mouseDown) return;
-
     const offset_x = event.pageX - settings.mouseDown.x;
     const offset_y = event.pageY - settings.mouseDown.y;
 
@@ -218,6 +232,12 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
       y = max_h;
     }
 
+    if (intersects(item, item.width, item.height, x, y)) {
+      setCursor("not-allowed");
+    } else {
+      setCursor("grabbing");
+    }
+
     onChange({
       ...item,
       x: x,
@@ -228,6 +248,18 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
       ...prev,
       mouseDown: { x: event.pageX, y: event.pageY },
     }));
+  }
+
+  function handleOnMouseEnterMove() {
+    setCursor("grab");
+  }
+
+  function handleOnMouseEnterResize() {
+    setCursor("se-resize");
+  }
+
+  function handleOnMouseLeaveHandler() {
+    setCursor("default");
   }
 
   return (
@@ -246,12 +278,19 @@ export function DashItem({ item, items, grid, onChange }: IDashItemProps) {
       }
     >
       <div className="move">
-        <div className="handler" onMouseDown={(event) => start("move", event)}>
+        <div
+          className="handler"
+          onMouseOver={handleOnMouseEnterMove}
+          onMouseOut={handleOnMouseLeaveHandler}
+          onMouseDown={(event) => start("move", event)}
+        >
           <TbGridDots size={20} color="#1f1c2c" />
         </div>
       </div>
       <div
         className="resize-handler"
+        onMouseOver={handleOnMouseEnterResize}
+        onMouseOut={handleOnMouseLeaveHandler}
         onMouseDown={(event) => start("resize", event)}
       />
     </div>
